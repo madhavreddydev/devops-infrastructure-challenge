@@ -1,0 +1,46 @@
+name: Build and Deploy to Kubernetes
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t devops-backend:${{ github.sha }} ./app
+
+      - name: Load image into Kind
+        run: |
+          kind load docker-image devops-backend:${{ github.sha }} --name devops-challenge
+
+      - name: Deploy PostgreSQL
+        run: |
+          kubectl apply -f k8s/postgres.yaml
+
+      - name: Wait for PostgreSQL
+        run: |
+          kubectl rollout status deployment/postgres --timeout=120s
+
+      - name: Deploy backend
+        run: |
+          kubectl apply -f k8s/backend.yaml
+          kubectl set image deployment/backend \
+            backend=devops-backend:${{ github.sha }}
+
+      - name: Wait for backend rollout
+        run: |
+          kubectl rollout status deployment/backend --timeout=120s
+
+      - name: Verify application
+        run: |
+          kubectl get pods
+          kubectl get services
+          kubectl get deployment
