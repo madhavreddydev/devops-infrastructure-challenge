@@ -42,7 +42,7 @@ spec:
 
           readinessProbe:
             httpGet:
-              path: /wrong
+              path: /ready
               port: 5000
             initialDelaySeconds: 10
             periodSeconds: 5
